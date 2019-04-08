@@ -1,0 +1,211 @@
+{
+  "static_question_names":
+    {
+      "1979":
+        {
+          "CASEID": "case_id",
+          "SAMPLE_RACE": "race",
+          "SAMPLE_SEX": "sex",
+          "SAMPLE_ID": "sample_id"
+        },
+
+      "1997":
+        {
+          "PUBID": "case_id",
+          "KEY!RACE_ETHNICITY": "race",
+          "KEY!SEX": "sex",
+          "CV_SAMPLE_TYPE": "sample_id"
+        }
+    },
+
+    "static_question_values":
+    {
+      "1979": {},
+      "1997":
+      {
+        "race": {"4": 3}
+      }
+    },
+
+    "dynamic_question_names":
+      {
+        "1979":
+          {
+            "Q13-5": "adjusted_income",
+            "Q13-5_TRUNC_REVISED": "adjusted_income",
+            "Q13-5_TRUNC": "adjusted_income",
+            "AGEATINT": "age",
+            "Q11-5C": "curr_pregnant",
+            "FFER-13": "curr_pregnant",
+            "Q11-4": "work_kind_limited",
+            "Q11-5": "work_amount_limited",
+            "FAMSIZE": "family_size",
+            "HRSWK-PCY": "hours_worked_last_year",
+            "WKSWK-PCY": "weeks_worked_last_year",
+            "URBAN-RURAL": "urban_or_rural",
+            "REGION": "region",
+            "HGCREV00": "highest_grade",
+            "HGCREV02": "highest_grade",
+            "HGCREV04": "highest_grade",
+            "HGCREV06": "highest_grade",
+            "HGCREV08": "highest_grade",
+            "HGCREV10": "highest_grade",
+            "HGCREV12": "highest_grade",
+            "HGCREV14": "highest_grade",
+            "HGCREV16": "highest_grade",
+            "HGCREV79": "highest_grade",
+            "HGCREV80": "highest_grade",
+            "HGCREV81": "highest_grade",
+            "HGCREV82": "highest_grade",
+            "HGCREV83": "highest_grade",
+            "HGCREV84": "highest_grade",
+            "HGCREV85": "highest_grade",
+            "HGCREV86": "highest_grade",
+            "HGCREV87": "highest_grade",
+            "HGCREV88": "highest_grade",
+            "HGCREV89": "highest_grade",
+            "HGCREV90": "highest_grade",
+            "HGCREV91": "highest_grade",
+            "HGCREV92": "highest_grade",
+            "HGCREV93": "highest_grade",
+            "HGCREV94": "highest_grade",
+            "HGCREV96": "highest_grade",
+            "HGCREV98": "highest_grade",
+            "MARSTAT-KEY": "marital_status",
+            "NUMKID00": "number_of_kids",
+            "NUMKID02": "number_of_kids",
+            "NUMKID04": "number_of_kids",
+            "NUMKID06": "number_of_kids",
+            "NUMKID08": "number_of_kids",
+            "NUMKID10": "number_of_kids",
+            "NUMKID12": "number_of_kids",
+            "NUMKID14": "number_of_kids",
+            "NUMKID16": "number_of_kids",
+            "NUMKID80": "number_of_kids",
+            "NUMKID82": "number_of_kids",
+            "NUMKID83": "number_of_kids",
+            "NUMKID84": "number_of_kids",
+            "NUMKID85": "number_of_kids",
+            "NUMKID86": "number_of_kids",
+            "NUMKID87": "number_of_kids",
+            "NUMKID88": "number_of_kids",
+            "NUMKID90": "number_of_kids",
+            "NUMKID90": "number_of_kids",
+            "NUMKID91": "number_of_kids",
+            "NUMKID92": "number_of_kids",
+            "NUMKID93": "number_of_kids",
+            "NUMKID94": "number_of_kids",
+            "NUMKID96": "number_of_kids",
+            "NUMKID98": "number_of_kids"
+          },
+
+        "1997":
+          {
+            "YINC-1700": "adjusted_income",
+            "CV_AGE_INT_DATE": "age",
+            "YSAQ-315": "curr_pregnant",
+            "YSAQ2-315": "curr_pregnant",
+            "YHEA-1005": "work_kind_limited",
+            "YHEA-1006": "work_amount_limited",
+            "CV_HH_SIZE": "family_size",
+            "CVC_HOURS_WK_YR_ALL.00": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.01": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.02": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.03": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.04": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.05": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.06": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.07": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.08": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.09": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.10": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.11": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.13": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.15": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.97": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.98": "hours_worked_last_year",
+            "CVC_HOURS_WK_YR_ALL.99": "hours_worked_last_year",
+            "CVC_WKSWK_YR_ALL.00": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.01": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.02": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.03": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.04": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.05": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.06": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.07": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.08": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.09": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.10": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.11": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.13": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.15": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.97": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.98": "weeks_worked_last_year",
+            "CVC_WKSWK_YR_ALL.99": "weeks_worked_last_year",
+            "CV_URBAN-RURAL": "urban_or_rural",
+            "CV_CENSUS_REGION": "region",
+            "YSCH-3112": "highest_grade",
+            "CV_MARSTAT_COLLAPSED": "marital_status",
+            "YSAQ-324": "number_of_kids",
+            "YSAQ2-324": "number_of_kids"
+          }
+      },
+
+      "dynamic_question_values":
+        {
+          "1979":
+            {
+              "marital_status": {"5": 1, "6":4},
+              "adjusted_income": {
+                  "1982": {"28975": -6 },
+                  "1983": {"31519": -6 },
+                  "1984": {"36574": -6 },
+                  "1985": {"39389": -6 },
+                  "1986": {"43119": -6 },
+                  "1987": {"59387": -6 },
+                  "1988": {"57124": -6 },
+                  "1989": {"62836": -6 },
+                  "1990": {"74283": -6 },
+                  "1991": {"81481": -6 },
+                  "1992": {"90325": -6 },
+                  "1993": {"100948": -6 },
+                  "1994": {"101653": -6 },
+                  "1996": {"138775": -6 },
+                  "1998": {"147970": -6 },
+                  "2000": {"216200": -6 },
+                  "2002": {"236000": -6 },
+                  "2004": {"265933": -6 },
+                  "2006": {"279816": -6 },
+                  "2008": {"307823": -6 },
+                  "2010": {"312324": -6 },
+                  "2012": {"343830": -6 },
+                  "2014": {"370314": -6 },
+                  "2016": {"332954": -6 }
+                }
+            },
+
+          "1997":
+            {
+              "urban_or_rural": {"2": -2},
+              "marital_status": {"5": 1},
+              "adjusted_income": {
+                  "1998": {"14048": -6 },
+                  "1999": {"25249": -6 },
+                  "2000": {"30623": -6 },
+                  "2001": {"35558": -6 },
+                  "2002": {"42458": -6 },
+                  "2003": {"44091": -6 },
+                  "2004": {"70712": -6 },
+                  "2005": {"69342": -6 },
+                  "2006": {"80471": -6 },
+                  "2007": {"112215": -6 },
+                  "2008": {"104353": -6 },
+                  "2009": {"121993": -6 },
+                  "2010": {"130254": -6 },
+                  "2011": {"146002": -6 },
+                  "2013": {"180331": -6 },
+                  "2015": {"212641": -6 }
+                }
+            }
+        }
+  }

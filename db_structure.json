@@ -1,0 +1,25 @@
+{
+  "wrangled_respondents_fields": [
+    "sample_id",
+    "sex",
+    "race"
+  ],
+
+  "wrangled_data_fields": [
+    "case_id",
+    "year",
+    "adjusted_income",
+    "age",
+    "curr_pregnant",
+    "work_kind_limited",
+    "work_amount_limited",
+    "family_size",
+    "hours_worked_last_year",
+    "weeks_worked_last_year",
+    "urban_or_rural",
+    "region",
+    "highest_grade",
+    "marital_status",
+    "number_of_kids"
+  ]
+}
