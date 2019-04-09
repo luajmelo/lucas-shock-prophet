@@ -20,7 +20,8 @@ class NLSY_database(object):
                 else:
                     print("Exiting...")
                     exit()
-
+            else:
+                self._conn = sqlite3.connect(path)
         else:
             self._conn = sqlite3.connect(path)
             cursor = self._conn.cursor()
@@ -164,13 +165,15 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def add_cohort_data(self, rnum_path, qname_path, responses_path):
+    def add_cohort_data(self, rnum_path, qname_path, responses_path, verbose = True):
         """
         Ingests all of the RNUM, question, and response data for a given cohort.
         """
         cursor = self._NLSY_db.conn.cursor()
 
         # The RNUMs and associated question names are stored on equivalent line numbers in two different files.
+        if verbose:
+            print("Ingesting {} survey data...".format(self._cohort_year))
         with open(rnum_path, 'r') as rnum_file:
             with open(qname_path, 'r') as qname_file:
                 for rnum in rnum_file:
@@ -208,11 +211,17 @@ class Cohort(object):
         # into shape, including separating responses out by year, normalizing
         # survey codes to match our codebook, adjusting for inflation, and
         # labeling income shocks.
+        if verbose:
+            print("Restructuring {} data into longitudinal form...".format(self._cohort_year))
         self._wrangle_respondents_data()
         self._wrangle_survey_data()
+        if verbose:
+            print("Updating {} data to match codebook...".format(self._cohort_year))
         self._translate_respondents_data()
         self._translate_survey_data()
         self._adjust_for_inflation()
+        if verbose:
+            print("Labeling income shocks for {} cohort...".format(self._cohort_year))
         self._label_shocks()
 
     def _wrangle_respondents_data(self):
@@ -261,7 +270,7 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def _wrangle_survey_data(self):
+    def _wrangle_survey_data(self, verbose = True):
         """
         Adds the data that varies by year, such as survey responses, to the
         wrangled_data table.
@@ -290,6 +299,8 @@ class Cohort(object):
             (case_id, year, question_name, response) = row
 
             if case_id != curr_case_id:
+                if verbose and case_id % 1000 == 0:
+                    print("{} respondents completed...".format(case_id))
                 curr_case_id = case_id
                 data_id = {}
 
