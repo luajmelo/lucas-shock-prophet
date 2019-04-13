@@ -260,7 +260,7 @@ class Cohort(object):
                 cursor.execute("""INSERT INTO
                     {respondents} (case_id, {field})
                     VALUES (?, ?)
-                    ON CONFLICT(case_id) DO UPDATE SET {field} = (?)""".format(
+                    ON CONFLICT (case_id) DO UPDATE SET {field} = (?)""".format(
                         case_id = case_id,
                         respondents = self._wrangled_respondents_table,
                         field = field),
