@@ -219,6 +219,7 @@ class Cohort(object):
             print("Updating {} data to match codebook...".format(self._cohort_year))
         self._translate_respondents_data()
         self._translate_survey_data()
+        self._translate_employer_data()
         self._adjust_for_inflation()
         if verbose:
             print("Labeling income shocks for {} cohort...".format(self._cohort_year))
@@ -393,6 +394,74 @@ class Cohort(object):
                             question_name = question_name),
                         (value, key)
                     )
+
+        self._NLSY_db.conn.commit()
+        cursor.close()
+
+    def _translate_employer_data(self, industry_file="industry_crosswalk.csv", occupation_file="occupation_crosswalk.csv"):
+        """
+        Update industry and occupation responses to conform to our standard codebook.
+        """
+        cursor = self._NLSY_db.conn.cursor()
+        industry_crosswalk = pd.read_csv(industry_file)
+        occupation_crosswalk = pd.read_csv(occupation_file)
+
+        # Update industry data...
+        for index, row in industry_crosswalk.iterrows():
+            # The 1979 data is coded using two different sets of census codes, depending on the year.
+            if self.cohort_year == 1979:
+                if not pd.isna(row["1970"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET industry = ?
+                                        WHERE industry = ?
+                                        AND YEAR < 2002""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["IND1990"], row["1970"]))
+
+                if not pd.isna(row["2000"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET industry = ?
+                                        WHERE industry = ?
+                                        AND YEAR >= 2002""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["IND1990"], row["2000"]))
+
+            if self.cohort_year == 1997:
+                if not pd.isna(row["ACS 2003-"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET industry = ?
+                                        WHERE industry = ?""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["IND1990"], row["ACS 2003-"]))
+
+        # Update ocupation data...
+        for index, row in occupation_crosswalk.iterrows():
+            # The 1979 data is coded using two different sets of census codes, depending on the year.
+            if self.cohort_year == 1979:
+                if not pd.isna(row["1970"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET occupation = ?
+                                        WHERE occupation = ?
+                                        AND YEAR < 2002""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["OCC2010"], row["1970"]))
+
+                if not pd.isna(row["2000"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET occupation = ?
+                                        WHERE occupation = ?
+                                        AND YEAR >= 2002""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["OCC2010"], row["2000"]))
+
+            if self.cohort_year == 1997:
+                if not pd.isna(row["ACS 2003-2009"]):
+                    cursor.execute("""UPDATE {data}
+                                        SET occupation = ?
+                                        WHERE occupation = ?""".format(
+                                            data = self._wrangled_data_table),
+                                        (row["OCC2010"], row["ACS 2003-2009"]))
+
 
         self._NLSY_db.conn.commit()
         cursor.close()

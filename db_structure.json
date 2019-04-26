@@ -20,6 +20,8 @@
     "region",
     "highest_grade",
     "marital_status",
-    "number_of_kids"
+    "number_of_kids",
+    "industry",
+    "occupation"
   ]
 }

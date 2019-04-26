@@ -96,7 +96,11 @@
             "NUMKID93": "number_of_kids",
             "NUMKID94": "number_of_kids",
             "NUMKID96": "number_of_kids",
-            "NUMKID98": "number_of_kids"
+            "NUMKID98": "number_of_kids",
+            "CPSIND70": "industry",
+            "INDALL-EMP.01": "industry",
+            "CPSOCC70": "occupation",
+            "OCCALL-EMP.01": "occupation"
           },
 
         "1997":
@@ -147,7 +151,9 @@
             "YSCH-3112": "highest_grade",
             "CV_MARSTAT_COLLAPSED": "marital_status",
             "YSAQ-324": "number_of_kids",
-            "YSAQ2-324": "number_of_kids"
+            "YSAQ2-324": "number_of_kids",
+            "YEMP_OCCODE-2002.01": "occupation",
+            "YEMP_INDCODE-2002.01": "industry"
           }
       },
 
