@@ -364,7 +364,8 @@ class Cohort(object):
 
     def _translate_survey_data(self):
         """
-        Update all responses to conform to our standard codebook.
+        Update all survey responses (other than industry and occupation data,
+        which are handled separately) to conform to our standard codebook.
         """
         cursor = self._NLSY_db.conn.cursor()
         fields_to_translate = self._dictionary["dynamic_question_values"][str(self._cohort_year)]
@@ -569,5 +570,11 @@ class Cohort(object):
         # only in the SQL database.
         df = df.loc[:,~df.columns.duplicated()]
         df.drop(['data_id'], axis=1, inplace=True)
+
+        return df
+
+    def data_no_nulls(self):
+        df = self.data()
+        df.drop(df[df.shock < 0].index, inplace=True)
 
         return df
