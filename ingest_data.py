@@ -9,7 +9,9 @@ if __name__ == '__main__':
 
     print("Ingesting years data...")
     year_path = os.path.join('data', 'years.csv')
+    region_path = os.path.join('data', 'regional_data.csv')
     NLSY_db.add_years_data(year_path)
+    NLSY_db.add_region_data(region_path)
 
     print("Ingesting and wrangling 1979 cohort data...")
     cohort_79 = NLSY_db.add_cohort(1979)

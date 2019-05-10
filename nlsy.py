@@ -34,6 +34,14 @@ class NLSY_database(object):
             else:
                 self._years_table = False
 
+            # Check to see if region data exists in the database...
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name = 'region_data'")
+            row = cursor.fetchone()
+            if row:
+                self._region_table = "region_data"
+            else:
+                self._region_table = False
+
             # Check to see if cohort data has already been imported...
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'questions_%'")
             rows = cursor.fetchall()
@@ -62,7 +70,11 @@ class NLSY_database(object):
     def years_table(self):
         return self._years_table
 
-    def add_cohort(self, cohort_year, initialize = True):
+    @property
+    def region_table(self):
+        return self._region_table
+
+    def add_cohort(self, cohort_year, initialize=True):
         new_cohort = Cohort(self, cohort_year, initialize)
         self._cohorts.append(new_cohort)
         return new_cohort
@@ -87,9 +99,36 @@ class NLSY_database(object):
                     cursor.execute("""INSERT INTO
                         years (year, unemployment, gdp_growth, inflation)
                         VALUES (?, ?, ?, ?)
-                        """, (row["year"], row["unemployment"], row["gdp_growth"], row["inflation"]))
+                        """, (row["year"], row["unemployment"],  row["gdp_growth"], row["inflation"]))
 
             self._years_table = "years"
+
+            self.conn.commit()
+            cursor.close()
+
+    def add_region_data(self, region_path):
+            """
+            Creates the region table and stores all region-specific data in it.
+            """
+            cursor = self.conn.cursor()
+
+            # The region table contains year-specific regional data.
+            cursor.execute("""CREATE TABLE IF NOT EXISTS region_data (
+                year INTEGER NOT NULL,
+                region INTEGER NOT NULL,
+                regional_unemployment REAL NOT NULL
+            )""")
+
+            with open(region_path) as csv_file:
+                csv_reader = csv.DictReader(csv_file, delimiter=',')
+                for row in csv_reader:
+                    #pdb.set_trace()
+                    cursor.execute("""INSERT INTO
+                        region_data (year, region, regional_unemployment)
+                        VALUES (?, ?, ?)
+                        """, (row["year"], row["region"], row["regional_unemployment"]))
+
+            self._region_table = "region_data"
 
             self.conn.commit()
             cursor.close()
@@ -165,7 +204,7 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def add_cohort_data(self, rnum_path, qname_path, responses_path, verbose = True):
+    def add_cohort_data(self, rnum_path, qname_path, responses_path, verbose=True):
         """
         Ingests all of the RNUM, question, and response data for a given cohort.
         """
@@ -271,7 +310,7 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def _wrangle_survey_data(self, verbose = True):
+    def _wrangle_survey_data(self, verbose=True):
         """
         Adds the data that varies by year, such as survey responses, to the
         wrangled_data table.
@@ -486,9 +525,8 @@ class Cohort(object):
              inflation_rate = row[1]
              inflation_dict[year] = inflation_rate
 
-        # We'll automatically adjust dollars to the final year given in the database.
+        # Adjust for inflation.
         adjust_year = year
-
         for year, inflation_rate in inflation_dict.items():
             inflation_adjustment = 1
             for inflation_year in range(year, adjust_year):
@@ -550,18 +588,19 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def data(self):
+    def data(self, include_nulls=False):
         conn = self._NLSY_db.conn
         cursor = conn.cursor()
 
-        years_table = self._NLSY_db.years_table
-
         sql_query = """SELECT * FROM {respondents}
             INNER JOIN {data} ON {data}.case_id = {respondents}.case_id
-            INNER JOIN {years} ON {data}.year = {years}.year""".format(
+            INNER JOIN {years} ON {data}.year = {years}.year
+            INNER JOIN {region} ON {region}.region = {data}.region AND
+                {region}.year = {data}.year""".format(
                 respondents = self._wrangled_respondents_table,
                 data = self._wrangled_data_table,
-                years = self._NLSY_db.years_table
+                years = self._NLSY_db.years_table,
+                region = self._NLSY_db.region_table
                 )
 
         df = pd.read_sql(sql_query, conn)
@@ -571,10 +610,7 @@ class Cohort(object):
         df = df.loc[:,~df.columns.duplicated()]
         df.drop(['data_id'], axis=1, inplace=True)
 
-        return df
-
-    def data_no_nulls(self):
-        df = self.data()
-        df.drop(df[df.shock < 0].index, inplace=True)
+        if not include_nulls:
+            df.drop(df[df.shock < 0].index, inplace=True)
 
         return df
