@@ -1,4 +1,28 @@
 {
+  "binned_values":
+    {
+      "highest_grade":
+        {
+          "0~4": "Less than elementary school",
+          "5~7": "Elementary school",
+          "8~11": "Middle school",
+          "12~12": "High school",
+          "13~15": "Some college",
+          "16~16": "College",
+          "17~100": "Graduate school"
+        },
+
+      "industry":
+        {
+          "-10": "UNKNOWN"
+        },
+
+      "occupation":
+        {
+          "-10": "UNKNOWN"
+        }
+    },
+
   "static_question_names":
     {
       "1979":

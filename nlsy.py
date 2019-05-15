@@ -454,17 +454,17 @@ class Cohort(object):
                     cursor.execute("""UPDATE {data}
                                         SET industry = ?
                                         WHERE industry = ?
-                                        AND YEAR < 2002""".format(
+                                        AND YEAR <= 2002""".format(
                                             data = self._wrangled_data_table),
                                         (row["IND1990"], row["1970"]))
 
-                if not pd.isna(row["2000"]):
+                if not pd.isna(row["ACS 2003-"]):
                     cursor.execute("""UPDATE {data}
                                         SET industry = ?
                                         WHERE industry = ?
-                                        AND YEAR >= 2002""".format(
+                                        AND YEAR > 2002""".format(
                                             data = self._wrangled_data_table),
-                                        (row["IND1990"], row["2000"]))
+                                        (row["IND1990"], row["ACS 2003-"]))
 
             if self.cohort_year == 1997:
                 if not pd.isna(row["ACS 2003-"]):
@@ -588,7 +588,7 @@ class Cohort(object):
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def data(self, include_nulls=False):
+    def data(self, include_nulls=False, impute_values=True, industry_file="industry_crosswalk.csv", occupation_file="occupation_crosswalk.csv"):
         conn = self._NLSY_db.conn
         cursor = conn.cursor()
 
@@ -612,5 +612,98 @@ class Cohort(object):
 
         if not include_nulls:
             df.drop(df[df.shock < 0].index, inplace=True)
+
+        if impute_values:
+
+            # Create bins for industry and occupation based on the crosswalk files.
+            industry_crosswalk = pd.read_csv(industry_file)
+            occupation_crosswalk = pd.read_csv(occupation_file)
+
+            bin_bottom = False
+            reset_bin = False
+            for index, row in industry_crosswalk.iterrows():
+                if reset_bin and row["IND1990"] != "#":
+                    reset_bin = False
+                    bin_bottom = row["IND1990"]
+                if row["IND1990"] == "#" and row["Industry category description"].isupper():
+                    reset_bin = True
+                    if bin_bottom:
+                        self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
+                    curr_description = row["Industry category description"].strip()
+            self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
+
+            industry_keys = list(self._dictionary["binned_values"]["industry"].keys()) + [99999]
+            for index, bin_bottom in enumerate(industry_keys):
+                if bin_bottom == 99999:
+                    break
+                bin_top = int(industry_keys[index + 1]) - 1
+                self._dictionary["binned_values"]["industry"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["industry"].pop(bin_bottom)
+
+            bin_bottom = False
+            reset_bin = False
+            for index, row in occupation_crosswalk.iterrows():
+                if reset_bin and row["OCC2010"] != "#":
+                    reset_bin = False
+                    bin_bottom = row["OCC2010"]
+                if row["OCC2010"] == "#" and row["Occupation category description"].isupper():
+                    reset_bin = True
+                    if bin_bottom:
+                        self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
+                    curr_description = row["Occupation category description"].strip()
+            self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
+
+            occupation_keys = list(self._dictionary["binned_values"]["occupation"].keys()) + [99999]
+            for index, bin_bottom in enumerate(occupation_keys):
+                if bin_bottom == 99999:
+                    break
+                bin_top = int(occupation_keys[index + 1]) - 1
+                self._dictionary["binned_values"]["occupation"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["occupation"].pop(bin_bottom)
+
+            for col, bin_dict in self._dictionary["binned_values"].items():
+                for bin_range, bin_name in bin_dict.items():
+                    (bin_bottom, bin_top) = bin_range.split("~")
+                    bin_bottom = int(bin_bottom)
+                    bin_top = int(bin_top)
+                    df.loc[(df[col] >= bin_bottom) & (df[col] <= bin_top), col] = bin_bottom
+
+            df["curr_pregnant"].fillna(0, inplace=True)
+            df.loc[df["curr_pregnant"] < 0, "curr_pregnant"] = 0
+            df["work_kind_limited"].fillna(0, inplace=True)
+            df["work_amount_limited"].fillna(0, inplace=True)
+            default_values = {"case_id": 0, "number_of_kids": 0, "family_size": 1, "marital_status": 0, "work_kind_limited": 0, "work_amount_limited": 0, "highest_grade": 0, "urban_or_rural": -1}
+            last_values = default_values
+            for index, row in df.iterrows():
+                if row["case_id"] != last_values["case_id"]:
+                    last_values = default_values
+                    last_values["case_id"] = row["case_id"]
+                for key, value in last_values.items():
+                    if pd.isna(row[key]) or row[key] < 0:
+                        df.at[index, key] = value
+                    else:
+                        last_values[key] = row[key]
+                if row["regional_unemployment"] == "":
+                    df.at[index, "regional_unemployment"] = row["unemployment"]
+
+            max_hours_worked = int(df["hours_worked_last_year"].mean() + 3 * df["hours_worked_last_year"].std())
+            df.loc[df["hours_worked_last_year"] > max_hours_worked, "hours_worked_last_year"] = max_hours_worked
+
+            default_hours_worked = int(df["hours_worked_last_year"].median())
+            df.loc[df["hours_worked_last_year"] < 0, "hours_worked_last_year"] = default_hours_worked
+
+            default_weeks_worked = int(df["weeks_worked_last_year"].median())
+            df.loc[df["weeks_worked_last_year"] < 0, "weeks_worked_last_year"] = default_weeks_worked
+
+            df.loc[df["urban_or_rural"] == 2, "urban_or_rural"] = 1
+
+            categorical_variables = ["region", "highest_grade", "industry", "occupation"]
+            #for variable in categorical_variable:
+            #    df[variable] = df[variable].astype(str)
+
+            # Force data into integer types where applicable.
+            for col in df.columns:
+                if col != "unemployment" and col != "inflation" and col != "regional_unemployment" and col != "gdp_growth":
+                    df[col] = df[col].astype("int64")
+
+            df = pd.get_dummies(df, columns=categorical_variables)
 
         return df
