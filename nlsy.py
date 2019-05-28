@@ -555,9 +555,15 @@ class Cohort(object):
             )
         )
 
+        cursor.execute("""ALTER TABLE {data}
+            ADD COLUMN prior_income INTEGER DEFAULT -10""".format(
+                data = self._wrangled_data_table
+            )
+        )
+
         for curr_year in range(self._cohort_year, 2018):
             future_year = curr_year + 2
-            cursor.execute("""SELECT a.data_id, a.case_id, a.adjusted_income, b.adjusted_income
+            cursor.execute("""SELECT a.data_id, b.data_id, a.case_id, a.adjusted_income, b.adjusted_income
                 FROM {data} AS a INNER JOIN {data} AS b ON a.case_id = b.case_id
                 WHERE a.year = {curr_year} AND b.year = {future_year}""".format(
                     data = self._wrangled_data_table,
@@ -569,34 +575,42 @@ class Cohort(object):
             rows = cursor.fetchall()
 
             for index, row in enumerate(rows):
-                (data_id, case_id, first_year_income, second_year_income) = row
+                (first_year_data_id, second_year_data_id, case_id, first_year_income, second_year_income) = row
+                cursor.execute("UPDATE {data} SET prior_income = {income} WHERE data_id = {data_id}".format(
+                    data = self._wrangled_data_table,
+                    income = first_year_income,
+                    data_id = second_year_data_id
+                    )
+                )
                 if first_year_income < 0 or second_year_income < 0:
                     pass
                 elif second_year_income < .8 * first_year_income:
                     cursor.execute("UPDATE {data} SET shock = 1 WHERE data_id = {data_id}".format(
                         data = self._wrangled_data_table,
-                        data_id = data_id
+                        data_id = first_year_data_id
                         )
                     )
                 else:
                     cursor.execute("UPDATE {data} SET shock = 0 WHERE data_id = {data_id}".format(
                         data = self._wrangled_data_table,
-                        data_id = data_id
+                        data_id =first_year_data_id
                         )
                     )
 
         self._NLSY_db.conn.commit()
         cursor.close()
 
-    def data(self, include_nulls=False, impute_values=True, industry_file="industry_crosswalk.csv", occupation_file="occupation_crosswalk.csv"):
+    def data(self, impute_values=True, industry_file="industry_crosswalk.csv", occupation_file="occupation_crosswalk.csv"):
         conn = self._NLSY_db.conn
         cursor = conn.cursor()
 
+        # We're using the prior year's economic data to account for the fact that
+        # accurate data often isn't available until after the end of a given year.
         sql_query = """SELECT * FROM {respondents}
             INNER JOIN {data} ON {data}.case_id = {respondents}.case_id
-            INNER JOIN {years} ON {data}.year = {years}.year
+            INNER JOIN {years} ON {data}.year = ({years}.year + 1)
             INNER JOIN {region} ON {region}.region = {data}.region AND
-                {region}.year = {data}.year""".format(
+                {region}.year = ({data}.year - 1)""".format(
                 respondents = self._wrangled_respondents_table,
                 data = self._wrangled_data_table,
                 years = self._NLSY_db.years_table,
@@ -609,63 +623,83 @@ class Cohort(object):
         # only in the SQL database.
         df = df.loc[:,~df.columns.duplicated()]
         df.drop(['data_id'], axis=1, inplace=True)
+        df.drop(df[df.shock < 0].index, inplace=True)
 
-        if not include_nulls:
-            df.drop(df[df.shock < 0].index, inplace=True)
+
+        # Create bins for industry and occupation based on the crosswalk files.
+        industry_crosswalk = pd.read_csv(industry_file)
+        occupation_crosswalk = pd.read_csv(occupation_file)
+        self._dictionary["binned_values"]["industry"] = {"-10": "UNKNOWN"}
+        self._dictionary["binned_values"]["occupation"] = {"-10": "UNKNOWN"}
+
+        bin_bottom = False
+        reset_bin = False
+        for index, row in industry_crosswalk.iterrows():
+            if reset_bin and row["IND1990"] != "#":
+                reset_bin = False
+                bin_bottom = row["IND1990"]
+            if row["IND1990"] == "#" and row["Industry category description"].isupper():
+                reset_bin = True
+                if bin_bottom:
+                    self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
+                curr_description = row["Industry category description"].strip()
+        self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
+
+        industry_keys = list(self._dictionary["binned_values"]["industry"].keys()) + [99999]
+        for index, bin_bottom in enumerate(industry_keys):
+            if bin_bottom == 99999:
+                break
+            bin_top = int(industry_keys[index + 1]) - 1
+            self._dictionary["binned_values"]["industry"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["industry"].pop(bin_bottom)
+
+        bin_bottom = False
+        reset_bin = False
+        for index, row in occupation_crosswalk.iterrows():
+            if reset_bin and row["OCC2010"] != "#":
+                reset_bin = False
+                bin_bottom = row["OCC2010"]
+            if row["OCC2010"] == "#" and row["Occupation category description"].isupper():
+                reset_bin = True
+                if bin_bottom:
+                    self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
+                curr_description = row["Occupation category description"].strip()
+        self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
+
+        occupation_keys = list(self._dictionary["binned_values"]["occupation"].keys()) + [99999]
+        for index, bin_bottom in enumerate(occupation_keys):
+            if bin_bottom == 99999:
+                break
+            bin_top = int(occupation_keys[index + 1]) - 1
+            self._dictionary["binned_values"]["occupation"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["occupation"].pop(bin_bottom)
+
+        for col, bin_dict in self._dictionary["binned_values"].items():
+            for bin_range, bin_name in bin_dict.items():
+                (bin_bottom, bin_top) = bin_range.split("~")
+                bin_bottom = int(bin_bottom)
+                bin_top = int(bin_top)
+                df.loc[(df[col] >= bin_bottom) & (df[col] <= bin_top), col] = bin_bottom
+
+
+        # Add the "income_change" variable.
+        for index, row in df.iterrows():
+            if row["adjusted_income"] == 0:
+                if row["prior_income"] == 0:
+                    df.at[index, "income_change"] = 0
+                else:
+                    df.at[index, "income_change"] = -1
+            elif row["adjusted_income"] > 0:
+                if row["prior_income"] <= 0:
+                    # Income growth is undefined, so set to 500%, equal to the 99.5th percentile value in our data.
+                    df.at[index, "income_change"] = 5
+                else:
+                    df.at[index, "income_change"] = min(row["adjusted_income"] / row ["prior_income"] - 1, 5)
+            else:
+                row["income_change"] = 0
+
+            if row["prior_income"] < 0:
+                df.at[index, "income_change"] = row["adjusted_income"]
 
         if impute_values:
-
-            # Create bins for industry and occupation based on the crosswalk files.
-            industry_crosswalk = pd.read_csv(industry_file)
-            occupation_crosswalk = pd.read_csv(occupation_file)
-
-            bin_bottom = False
-            reset_bin = False
-            for index, row in industry_crosswalk.iterrows():
-                if reset_bin and row["IND1990"] != "#":
-                    reset_bin = False
-                    bin_bottom = row["IND1990"]
-                if row["IND1990"] == "#" and row["Industry category description"].isupper():
-                    reset_bin = True
-                    if bin_bottom:
-                        self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
-                    curr_description = row["Industry category description"].strip()
-            self._dictionary["binned_values"]["industry"][bin_bottom] = curr_description
-
-            industry_keys = list(self._dictionary["binned_values"]["industry"].keys()) + [99999]
-            for index, bin_bottom in enumerate(industry_keys):
-                if bin_bottom == 99999:
-                    break
-                bin_top = int(industry_keys[index + 1]) - 1
-                self._dictionary["binned_values"]["industry"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["industry"].pop(bin_bottom)
-
-            bin_bottom = False
-            reset_bin = False
-            for index, row in occupation_crosswalk.iterrows():
-                if reset_bin and row["OCC2010"] != "#":
-                    reset_bin = False
-                    bin_bottom = row["OCC2010"]
-                if row["OCC2010"] == "#" and row["Occupation category description"].isupper():
-                    reset_bin = True
-                    if bin_bottom:
-                        self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
-                    curr_description = row["Occupation category description"].strip()
-            self._dictionary["binned_values"]["occupation"][bin_bottom] = curr_description
-
-            occupation_keys = list(self._dictionary["binned_values"]["occupation"].keys()) + [99999]
-            for index, bin_bottom in enumerate(occupation_keys):
-                if bin_bottom == 99999:
-                    break
-                bin_top = int(occupation_keys[index + 1]) - 1
-                self._dictionary["binned_values"]["occupation"]["{}~{}".format(bin_bottom, bin_top)] = self._dictionary["binned_values"]["occupation"].pop(bin_bottom)
-
-            for col, bin_dict in self._dictionary["binned_values"].items():
-                for bin_range, bin_name in bin_dict.items():
-                    (bin_bottom, bin_top) = bin_range.split("~")
-                    bin_bottom = int(bin_bottom)
-                    bin_top = int(bin_top)
-                    df.loc[(df[col] >= bin_bottom) & (df[col] <= bin_top), col] = bin_bottom
-
             df["curr_pregnant"].fillna(0, inplace=True)
             df.loc[df["curr_pregnant"] < 0, "curr_pregnant"] = 0
             df["work_kind_limited"].fillna(0, inplace=True)
@@ -694,16 +728,34 @@ class Cohort(object):
             df.loc[df["weeks_worked_last_year"] < 0, "weeks_worked_last_year"] = default_weeks_worked
 
             df.loc[df["urban_or_rural"] == 2, "urban_or_rural"] = 1
+        else:
+            # Some variables have *so* many missing values, and such clear imputed values,
+            # that we're imputing them even for the "non-imputed" version of the data.
 
-            categorical_variables = ["region", "highest_grade", "industry", "occupation"]
-            #for variable in categorical_variable:
-            #    df[variable] = df[variable].astype(str)
+            df.loc[df["urban_or_rural"] == 2, "urban_or_rural"] = -1
+            df["curr_pregnant"].fillna(0, inplace=True)
+            df.loc[df["curr_pregnant"] < 0, "curr_pregnant"] = 0
+            df["work_kind_limited"].fillna(0, inplace=True)
+            df["work_amount_limited"].fillna(0, inplace=True)
+            for index, row in df.iterrows():
+                if row["regional_unemployment"] == "":
+                    df.at[index, "regional_unemployment"] = row["unemployment"]
+            df.dropna(inplace=True)
+            for col in df.columns.tolist()[1:]:
+                if col != "industry" and col != "occupation":
+                    try:
+                        df = df.ix[df[col] >= 0]
+                    except:
+                        pass
 
-            # Force data into integer types where applicable.
-            for col in df.columns:
-                if col != "unemployment" and col != "inflation" and col != "regional_unemployment" and col != "gdp_growth":
-                    df[col] = df[col].astype("int64")
+        # Force data into numeric types where applicable.
+        for col in df.columns:
+            if col != "unemployment" and col != "inflation" and col != "regional_unemployment" and col != "gdp_growth" and col != "income_change":
+                df[col] = df[col].astype("int64")
 
-            df = pd.get_dummies(df, columns=categorical_variables)
+        categorical_variables = ["region", "highest_grade", "industry", "occupation"]
+        non_dummies_df = df[categorical_variables]
+        df = pd.get_dummies(df, columns=categorical_variables)
+        df = pd.concat([df, non_dummies_df], axis=1)
 
         return df
