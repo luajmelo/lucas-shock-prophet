@@ -682,6 +682,10 @@ class Cohort(object):
 
         # Add the "income_change" variable.
         for index, row in df.iterrows():
+            if row["prior_income"] < 0:
+                df.at[index, "prior_income"] = row["adjusted_income"]
+                row["prior_income"] = row["adjusted_income"]
+
             if row["adjusted_income"] == 0:
                 if row["prior_income"] == 0:
                     df.at[index, "income_change"] = 0
@@ -694,10 +698,9 @@ class Cohort(object):
                 else:
                     df.at[index, "income_change"] = min(row["adjusted_income"] / row ["prior_income"] - 1, 5)
             else:
-                row["income_change"] = 0
+                df.at[index, "income_change"] = 0
 
-            if row["prior_income"] < 0:
-                df.at[index, "income_change"] = row["adjusted_income"]
+
 
         if impute_values:
             df["curr_pregnant"].fillna(0, inplace=True)
