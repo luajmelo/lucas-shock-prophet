@@ -756,7 +756,16 @@ class Cohort(object):
             if col != "unemployment" and col != "inflation" and col != "regional_unemployment" and col != "gdp_growth" and col != "income_change":
                 df[col] = df[col].astype("int64")
 
-        categorical_variables = ["region", "highest_grade", "industry", "occupation"]
+
+        # Create a variable to represent any variety of work limitation.
+        df["work_limited"] = df["work_kind_limited"] + df["work_amount_limited"]
+        df["work_limited"].replace(2, 1, inplace=True)
+
+        # Combine the various unknown/inapplicable codes for industry and occupation.
+        df["occupation"].replace([-10, 0], 9920, inplace=True)
+        df["industry"].replace([-10, 0], 992, inplace=True)
+
+        categorical_variables = ["region", "highest_grade", "industry", "occupation", "marital_status", "race"]
         non_dummies_df = df[categorical_variables]
         df = pd.get_dummies(df, columns=categorical_variables)
         df = pd.concat([df, non_dummies_df], axis=1)
