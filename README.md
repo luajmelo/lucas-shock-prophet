@@ -15,7 +15,7 @@ An individual who learns that he or she is at a high risk for a negative income 
 
 On the other hand, those who find their income shock risk is relatively low might feel greater confidence in taking on long-term financial commitments or investing in risky assets such as stocks.
 
-![]("Income Shock Predictor".gif)
+![Income Shock predictor Demo](Income-Shock-Predictor.gif)
 
 #### With that said, we are not offering any financial advice to any individual, and any financial decisions should be made in consultation with appropriate expert.
 
