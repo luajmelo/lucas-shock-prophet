@@ -39,3 +39,6 @@ Cross-Validation.ipynb - Explores different machine learning models and exports 
 ## Demo
 
 Income Shock Predictor.ipynb - An interactive visualization allowing users to explore income shock risk.
+
+
+cloned and moved it to my own account in case fork is deleted -- Lucas
